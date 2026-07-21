@@ -1,19 +1,10 @@
 name: Deploy Worker to Daytona
 
 on:
-  push:
-    paths:
-      - '.github/workflows/deploy-daytona.yml'
   workflow_dispatch:
-    inputs:
-      action:
-        description: 'start or stop'
-        required: true
-        default: 'start'
-        type: choice
-        options:
-          - start
-          - stop
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -25,25 +16,7 @@ jobs:
           host: ssh.app.daytona.io
           username: ${{ secrets.DAYTONA_TOKEN }}
           password: ${{ secrets.DAYTONA_TOKEN }}
-          script_stop: false
           script: |
-            if [ "${{ github.event.inputs.action }}" = "stop" ]; then
-              echo "Stopping worker..."
-              python3 -c "
-import os, signal
-for p in os.listdir('/proc'):
-    if p.isdigit():
-        try:
-            cmd = open(f'/proc/{p}/cmdline','rb').read()
-            if b'worker_daytona' in cmd:
-                print(f'Killing {p}')
-                os.kill(int(p), signal.SIGTERM)
-        except: pass
-" 2>/dev/null || true
-              echo "Stopped."
-              exit 0
-            fi
-
             echo "=== Deploying worker to Daytona ==="
             uname -a
             python3 --version
@@ -61,6 +34,20 @@ for p in os.listdir('/proc'):
               python3 -m pip install websockets --break-system-packages 2>/dev/null || python3 -m pip install websockets 2>/dev/null || true
               python3 -c "import websockets; print('websockets OK')" 2>/dev/null || echo "WARN: websockets not available"
             }
+
+            echo "Stopping old worker..."
+            python3 -c "
+import os, signal
+for p in os.listdir('/proc'):
+    if p.isdigit():
+        try:
+            cmd = open(f'/proc/{p}/cmdline','rb').read()
+            if b'worker_daytona' in cmd:
+                print(f'Killing {p}')
+                os.kill(int(p), signal.SIGTERM)
+        except: pass
+" 2>/dev/null || true
+            sleep 1
 
             echo "Starting worker..."
             cd "$REPO_DIR/server"
