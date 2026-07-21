@@ -1,0 +1,39 @@
+name: E2E Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install websockets orjson
+
+      - name: Download binaries
+        run: |
+          echo "=== Downloading release binaries ==="
+          curl -sL -o /tmp/proxy-ssh https://github.com/Setron-dev/proxy-ssh/releases/download/v1.0.0/proxy-ssh-linux-amd64
+          curl -sL -o /tmp/proxy-ssh-client https://github.com/Setron-dev/proxy-ssh/releases/download/v1.0.0/proxy-ssh-client-linux-amd64
+          chmod +x /tmp/proxy-ssh /tmp/proxy-ssh-client
+
+      - name: Verify binaries
+        run: |
+          echo "=== Worker ==="
+          /tmp/proxy-ssh --help
+          echo ""
+          echo "=== Client ==="
+          /tmp/proxy-ssh-client --help
+
+      - name: Run E2E test
+        run: python tests/e2e_test.py
