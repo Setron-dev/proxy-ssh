@@ -58,7 +58,7 @@ TEST_SITES = [
     {"name": "postman-echo /post",        "host": "postman-echo.com", "port": 80, "req": b"POST /post HTTP/1.1\r\nHost: postman-echo.com\r\nContent-Type: text/plain\r\nContent-Length: 11\r\nConnection: close\r\n\r\nhello world"},
     {"name": "httpbin /ip (large req)",   "host": "httpbin.org",      "port": 80, "req": b"POST /post HTTP/1.1\r\nHost: httpbin.org\r\nContent-Type: application/octet-stream\r\nContent-Length: 1024\r\nConnection: close\r\n\r\n" + b"X" * 1024},
     {"name": "http.org",                  "host": "http.org",         "port": 80, "req": b"GET / HTTP/1.1\r\nHost: http.org\r\nConnection: close\r\n\r\n"},
-    {"name": "neverssl.com",              "host": "neverssl.com",     "port": 80, "req": b"GET / HTTP/1.1\r\nHost: neverssl.com\r\nConnection: close\r\n\r\n"},
+    {"name": "httpbin /delay/2",           "host": "httpbin.org",      "port": 80, "req": b"GET /delay/2 HTTP/1.1\r\nHost: httpbin.org\r\nConnection: close\r\n\r\n"},
 ]
 
 
