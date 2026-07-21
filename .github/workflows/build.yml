@@ -1,0 +1,80 @@
+name: Build Executables
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: proxy-ssh-linux-amd64
+            target: linux-amd64
+          - os: macos-latest
+            artifact: proxy-ssh-macos-amd64
+            target: macos-amd64
+          - os: macos-latest
+            artifact: proxy-ssh-macos-arm64
+            target: macos-arm64
+          - os: windows-latest
+            artifact: proxy-ssh-windows-amd64.exe
+            target: windows-amd64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyinstaller websockets orjson
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --name proxy-ssh --clean proxy-ssh.py
+
+      - name: Upload artifact (Linux/macOS)
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/proxy-ssh
+          retention-days: 30
+
+      - name: Upload artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/proxy-ssh.exe
+          retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/proxy-ssh-linux-amd64/proxy-ssh
+            artifacts/proxy-ssh-macos-amd64/proxy-ssh
+            artifacts/proxy-ssh-macos-arm64/proxy-ssh
+            artifacts/proxy-ssh-windows-amd64/proxy-ssh.exe
