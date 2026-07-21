@@ -42,7 +42,7 @@ TEST_SITES = [
     {"name": "httpbin.org /ip",           "host": "httpbin.org",      "port": 80, "req": b"GET /ip HTTP/1.1\r\nHost: httpbin.org\r\nConnection: close\r\n\r\n"},
     {"name": "example.com",               "host": "example.com",      "port": 80, "req": b"GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n"},
     {"name": "google.com",                "host": "google.com",       "port": 80, "req": b"GET / HTTP/1.1\r\nHost: google.com\r\nConnection: close\r\n\r\n"},
-    {"name": "httpbin POST json",         "host": "httpbin.org",      "port": 80, "req": b"POST /post HTTP/1.1\r\nHost: httpbin.org\r\nContent-Type: application/json\r\nContent-Length: 27\r\nConnection: close\r\n\r\n{\"test\":\"proxy-ssh-data\"}"},
+    {"name": "httpbin POST json",         "host": "httpbin.org",      "port": 80, "req": b"POST /post HTTP/1.1\r\nHost: httpbin.org\r\nContent-Type: application/json\r\nContent-Length: 25\r\nConnection: close\r\n\r\n{\"test\":\"proxy-ssh-data\"}"},
     {"name": "httpbin /headers",          "host": "httpbin.org",      "port": 80, "req": b"GET /headers HTTP/1.1\r\nHost: httpbin.org\r\nX-Custom: proxy-ssh\r\nConnection: close\r\n\r\n"},
     {"name": "httpbin /user-agent",       "host": "httpbin.org",      "port": 80, "req": b"GET /user-agent HTTP/1.1\r\nHost: httpbin.org\r\nUser-Agent: proxy-ssh-test/1.0\r\nConnection: close\r\n\r\n"},
     {"name": "httpbin /delay/1",          "host": "httpbin.org",      "port": 80, "req": b"GET /delay/1 HTTP/1.1\r\nHost: httpbin.org\r\nConnection: close\r\n\r\n"},
