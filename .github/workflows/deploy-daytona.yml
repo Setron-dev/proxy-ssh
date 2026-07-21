@@ -16,12 +16,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
+      - name: Deploy via SSH with token
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.DAYTONA_HOST }}
-          username: ${{ secrets.DAYTONA_USER }}
-          key: ${{ secrets.DAYTONA_SSH_KEY }}
+          host: ssh.app.daytona.io
+          username: ${{ secrets.DAYTONA_TOKEN }}
+          password: ${{ secrets.DAYTONA_TOKEN }}
           script: |
             set -e
 
