@@ -1,6 +1,9 @@
 name: Deploy Worker to Daytona
 
 on:
+  push:
+    paths:
+      - '.github/workflows/deploy-daytona.yml'
   workflow_dispatch:
     inputs:
       action:
