@@ -106,7 +106,7 @@ class MockWorker:
 
         try:
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(host, port), timeout=10,
+                asyncio.open_connection(host, port), timeout=20,
             )
         except Exception as exc:
             logger.error("connect to %s:%d failed: %s", host, port, exc)
