@@ -37,3 +37,39 @@ jobs:
 
       - name: Run E2E test
         run: python tests/e2e_test.py
+
+  deploy-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ssh.app.daytona.io
+          username: ${{ secrets.DAYTONA_TOKEN }}
+          password: ${{ secrets.DAYTONA_TOKEN }}
+          script: |
+            echo "=== Deploying worker to Daytona ==="
+            python3 --version
+            REPO_DIR="$HOME/proxy-ssh"
+            mkdir -p "$REPO_DIR"
+            echo "Downloading..."
+            curl -sL https://github.com/Setron-dev/proxy-ssh/archive/refs/heads/main.tar.gz | tar xz --strip-components=1 -C "$REPO_DIR" 2>/dev/null
+            python3 -c "import websockets" 2>/dev/null || { curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/gp.py && python3 /tmp/gp.py 2>/dev/null; python3 -m pip install websockets 2>/dev/null; }
+            cd "$REPO_DIR/server"
+            python3 -c "
+import os, signal
+for p in os.listdir('/proc'):
+    if p.isdigit():
+        try:
+            c = open(f'/proc/{p}/cmdline','rb').read()
+            if b'worker_daytona' in c: os.kill(int(p), signal.SIGTERM)
+        except: pass
+" 2>/dev/null || true
+            python3 -c "
+import subprocess, sys
+subprocess.Popen([sys.executable, '-u', 'worker_daytona.py'],
+    stdout=open('/tmp/worker.log','w'), stderr=subprocess.STDOUT, start_new_session=True)
+"
+            sleep 2
+            cat /tmp/worker.log
+            echo "=== Done ==="
