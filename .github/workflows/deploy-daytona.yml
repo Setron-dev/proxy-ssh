@@ -36,14 +36,13 @@ jobs:
 
             echo "=== Deploying relay to Daytona ==="
 
-            if [ -d "$REPO_DIR" ]; then
-              cd "$REPO_DIR"
-              git pull origin main
-            else
-              git clone https://github.com/Setron-dev/proxy-ssh.git "$REPO_DIR"
-              cd "$REPO_DIR"
-            fi
+            mkdir -p "$REPO_DIR"
+            cd "$REPO_DIR"
 
+            echo "Downloading code..."
+            curl -sL https://github.com/Setron-dev/proxy-ssh/archive/refs/heads/main.tar.gz | tar xz --strip-components=1
+
+            echo "Installing dependencies..."
             pip3 install websockets --break-system-packages 2>/dev/null || pip3 install websockets
 
             echo "Stopping old relay if running..."
