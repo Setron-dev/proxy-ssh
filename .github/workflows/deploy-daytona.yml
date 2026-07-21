@@ -1,0 +1,60 @@
+name: Deploy Relay to Daytona
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'start or stop'
+        required: true
+        default: 'start'
+        type: choice
+        options:
+          - start
+          - stop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DAYTONA_HOST }}
+          username: ${{ secrets.DAYTONA_USER }}
+          key: ${{ secrets.DAYTONA_SSH_KEY }}
+          script: |
+            set -e
+
+            REPO_DIR="$HOME/proxy-ssh"
+
+            if [ "${{ github.event.inputs.action }}" = "stop" ]; then
+              echo "Stopping relay..."
+              pkill -f relay_standalone.py || true
+              echo "Stopped."
+              exit 0
+            fi
+
+            echo "=== Deploying relay to Daytona ==="
+
+            if [ -d "$REPO_DIR" ]; then
+              cd "$REPO_DIR"
+              git pull origin main
+            else
+              git clone https://github.com/Setron-dev/proxy-ssh.git "$REPO_DIR"
+              cd "$REPO_DIR"
+            fi
+
+            pip3 install websockets --break-system-packages 2>/dev/null || pip3 install websockets
+
+            echo "Stopping old relay if running..."
+            pkill -f relay_standalone.py || true
+            sleep 1
+
+            echo "Starting relay server..."
+            nohup python3 -u server/relay_standalone.py > /tmp/relay.log 2>&1 &
+            echo "PID: $!"
+
+            sleep 2
+            echo "--- Relay log ---"
+            cat /tmp/relay.log
+            echo "=== Done ==="
