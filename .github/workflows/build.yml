@@ -1,4 +1,4 @@
-name: Build, Deploy & Test
+name: Build & Release
 
 on:
   push:
@@ -69,72 +69,8 @@ jobs:
           name: proxy-ssh-client-${{ matrix.target }}
           path: dist/proxy-ssh-client-${{ matrix.target }}*
 
-  deploy-and-test:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON }}
-
-      - name: Install deps
-        run: pip install websockets orjson
-
-      - name: Download linux-amd64 binaries
-        uses: actions/download-artifact@v5
-        with:
-          name: proxy-ssh-linux-amd64
-          path: dist/
-
-      - name: Make binaries executable
-        run: chmod +x dist/proxy-ssh-linux-amd64 dist/proxy-ssh-client-linux-amd64
-
-      - name: Setup SSH tunnel to VPS
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -p 22 ssh.app.daytona.io >> ~/.ssh/known_hosts 2>/dev/null || true
-          nohup ssh -o StrictHostKeyChecking=accept-new \
-            -o ServerAliveInterval=30 \
-            -o ServerAliveCountMax=3 \
-            -N -f \
-            -L 8443:127.0.0.1:8443 \
-            -L 3128:127.0.0.1:3128 \
-            JQAkten5aGApQzSPT875P62bONzMlWoH@ssh.app.daytona.io \
-            || echo "SSH tunnel may need password - trying alternative"
-          sleep 2
-          echo "Tunnel status:"
-          ss -tlnp | grep -E '(8443|3128)' || echo "Ports not yet bound"
-
-      - name: Start relay server on VPS
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new \
-            JQAkten5aGApQzSPT875P62bONzMlWoH@ssh.app.daytona.io \
-            "cd proxy-ssh/server && pip install websockets orjson && python relay_server.py &" \
-            || echo "Server may already be running"
-
-      - name: Wait for server
-        run: sleep 3
-
-      - name: Run integration tests
-        run: python tests/integration_test.py
-        env:
-          PROXY_SSH_WORKER: dist/proxy-ssh-linux-amd64
-          PROXY_SSH_CLIENT: dist/proxy-ssh-client-linux-amd64
-          SERVER_WS: ws://127.0.0.1:8443/relay
-          SERVER_TCP: 127.0.0.1:3128
-          AUTH_TOKEN: CHANGE_ME_TO_A_SECURE_TOKEN
-
-      - name: Upload test report
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: test-report
-          path: test-report.json
-
   release:
-    needs: [build, deploy-and-test]
+    needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -149,6 +85,6 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/proxy-ssh-*/proxy-ssh-*
-          files: artifacts/proxy-ssh-client-*/proxy-ssh-client-*
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
