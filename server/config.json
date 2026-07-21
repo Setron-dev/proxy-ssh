@@ -1,0 +1,21 @@
+{
+  "client_listener": {
+    "host": "0.0.0.0",
+    "port": 3128
+  },
+  "worker_ws": {
+    "host": "0.0.0.0",
+    "port": 8443,
+    "path": "/relay",
+    "auth_token": "CHANGE_ME_TO_A_SECURE_TOKEN"
+  },
+  "tls": {
+    "enabled": false,
+    "certfile": "cert.pem",
+    "keyfile": "key.pem"
+  },
+  "timeouts": {
+    "client_idle": 300,
+    "worker_response": 60
+  }
+}
