@@ -16,58 +16,51 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH with token
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ssh.app.daytona.io
           username: ${{ secrets.DAYTONA_TOKEN }}
           password: ${{ secrets.DAYTONA_TOKEN }}
+          script_stop: false
           script: |
-            REPO_DIR="$HOME/proxy-ssh"
-
             if [ "${{ github.event.inputs.action }}" = "stop" ]; then
               echo "Stopping relay..."
-              ps aux | grep "[r]elay_standalone" | awk '{print $2}' | xargs kill 2>/dev/null || true
+              for pid in $(python3 -c "import os; [print(p) for p in os.listdir('/proc') if p.isdigit() and open(f'/proc/{p}/cmdline','rb').read().find(b'relay_standalone')>=0]" 2>/dev/null); do
+                kill $pid 2>/dev/null || true
+              done
               echo "Stopped."
               exit 0
             fi
 
             echo "=== Deploying relay to Daytona ==="
-            echo "--- System info ---"
             uname -a
             python3 --version
-            echo "---"
 
+            REPO_DIR="$HOME/proxy-ssh"
             mkdir -p "$REPO_DIR"
-            cd "$REPO_DIR"
 
             echo "Downloading code..."
-            curl -sL https://github.com/Setron-dev/proxy-ssh/archive/refs/heads/main.tar.gz | tar xz --strip-components=1
+            curl -sL https://github.com/Setron-dev/proxy-ssh/archive/refs/heads/main.tar.gz | tar xz --strip-components=1 -C "$REPO_DIR"
 
             echo "Installing websockets..."
-            if python3 -c "import websockets" 2>/dev/null; then
-              echo "websockets already installed"
-            else
-              echo "Installing pip first..."
+            python3 -c "import websockets; print('websockets OK')" 2>/dev/null && echo "Already installed" || {
               curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
               python3 /tmp/get-pip.py --break-system-packages 2>/dev/null || python3 /tmp/get-pip.py 2>/dev/null || true
               python3 -m pip install websockets --break-system-packages 2>/dev/null || python3 -m pip install websockets 2>/dev/null || true
-              python3 -c "import websockets; print('websockets OK')" 2>/dev/null || echo "WARN: websockets still not available"
-            fi
-
-            echo "Stopping old relay if running..."
-            ps aux | grep "[r]elay_standalone" | awk '{print $2}' | xargs kill 2>/dev/null || true
-            sleep 1
+              python3 -c "import websockets; print('websockets OK')" 2>/dev/null || echo "WARN: websockets not available"
+            }
 
             echo "Starting relay server..."
             cd "$REPO_DIR/server"
-            nohup python3 -u relay_standalone.py > /tmp/relay.log 2>&1 &
-            RELAY_PID=$!
-            echo "PID: $RELAY_PID"
-
+            python3 -c "
+import subprocess, sys
+subprocess.Popen([sys.executable, '-u', 'relay_standalone.py'],
+    stdout=open('/tmp/relay.log','w'), stderr=subprocess.STDOUT,
+    start_new_session=True)
+print('Relay started')
+"
             sleep 3
             echo "--- Relay log ---"
             cat /tmp/relay.log
-            echo "--- Process alive? ---"
-            kill -0 $RELAY_PID 2>/dev/null && echo "YES: relay is running (PID=$RELAY_PID)" || echo "NO: relay crashed"
             echo "=== Done ==="
