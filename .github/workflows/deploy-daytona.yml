@@ -1,9 +1,6 @@
-name: Deploy Relay to Daytona
+name: Deploy Worker to Daytona
 
 on:
-  push:
-    paths:
-      - '.github/workflows/deploy-daytona.yml'
   workflow_dispatch:
     inputs:
       action:
@@ -28,15 +25,23 @@ jobs:
           script_stop: false
           script: |
             if [ "${{ github.event.inputs.action }}" = "stop" ]; then
-              echo "Stopping relay..."
-              for pid in $(python3 -c "import os; [print(p) for p in os.listdir('/proc') if p.isdigit() and open(f'/proc/{p}/cmdline','rb').read().find(b'relay_standalone')>=0]" 2>/dev/null); do
-                kill $pid 2>/dev/null || true
-              done
+              echo "Stopping worker..."
+              python3 -c "
+import os, signal
+for p in os.listdir('/proc'):
+    if p.isdigit():
+        try:
+            cmd = open(f'/proc/{p}/cmdline','rb').read()
+            if b'worker_daytona' in cmd:
+                print(f'Killing {p}')
+                os.kill(int(p), signal.SIGTERM)
+        except: pass
+" 2>/dev/null || true
               echo "Stopped."
               exit 0
             fi
 
-            echo "=== Deploying relay to Daytona ==="
+            echo "=== Deploying worker to Daytona ==="
             uname -a
             python3 --version
 
@@ -54,16 +59,16 @@ jobs:
               python3 -c "import websockets; print('websockets OK')" 2>/dev/null || echo "WARN: websockets not available"
             }
 
-            echo "Starting relay server..."
+            echo "Starting worker..."
             cd "$REPO_DIR/server"
             python3 -c "
 import subprocess, sys
-subprocess.Popen([sys.executable, '-u', 'relay_standalone.py'],
-    stdout=open('/tmp/relay.log','w'), stderr=subprocess.STDOUT,
+subprocess.Popen([sys.executable, '-u', 'worker_daytona.py'],
+    stdout=open('/tmp/worker.log','w'), stderr=subprocess.STDOUT,
     start_new_session=True)
-print('Relay started')
+print('Worker started')
 "
             sleep 3
-            echo "--- Relay log ---"
-            cat /tmp/relay.log
+            echo "--- Worker log ---"
+            cat /tmp/worker.log
             echo "=== Done ==="
