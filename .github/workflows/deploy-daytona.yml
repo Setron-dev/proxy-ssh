@@ -27,7 +27,7 @@ jobs:
 
             if [ "${{ github.event.inputs.action }}" = "stop" ]; then
               echo "Stopping relay..."
-              pkill -f relay_standalone.py || true
+              ps aux | grep "[r]elay_standalone" | awk '{print $2}' | xargs kill 2>/dev/null || true
               echo "Stopped."
               exit 0
             fi
@@ -56,11 +56,12 @@ jobs:
             fi
 
             echo "Stopping old relay if running..."
-            pkill -f relay_standalone.py || true
+            ps aux | grep "[r]elay_standalone" | awk '{print $2}' | xargs kill 2>/dev/null || true
             sleep 1
 
             echo "Starting relay server..."
-            nohup python3 -u server/relay_standalone.py > /tmp/relay.log 2>&1 &
+            cd "$REPO_DIR/server"
+            nohup python3 -u relay_standalone.py > /tmp/relay.log 2>&1 &
             RELAY_PID=$!
             echo "PID: $RELAY_PID"
 
