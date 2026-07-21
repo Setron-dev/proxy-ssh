@@ -69,6 +69,8 @@ class ClientListener:
                 await self._cm.close_client(conn_id)
                 return
 
+            await self._bridge.register_queue(conn_id)
+
             req_msg = RelayMessage.make_request(
                 request_id=conn_id,
                 client_id=client_id,
@@ -90,6 +92,7 @@ class ClientListener:
             logger.error("client error: %s", exc, exc_info=True)
         finally:
             await self._cm.close_client(conn_id)
+            await self._bridge.unregister_queue(conn_id)
             try:
                 writer.close()
                 await writer.wait_closed()
