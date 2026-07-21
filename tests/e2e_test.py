@@ -135,23 +135,35 @@ class MockWorker:
 
     def _parse_target(self, data: bytes) -> tuple[str, int]:
         try:
-            first_line = data.split(b"\r\n", 1)[0]
-            parts = first_line.split(b" ")
-            if len(parts) >= 2:
-                target = parts[1].decode("utf-8", errors="ignore")
-                if target.startswith("http://"):
-                    target = target[7:]
-                if "/" in target:
-                    target = target.split("/")[0]
-                if ":" in target:
-                    return target.split(":")[0], int(target.split(":")[1])
-                return target, 80
+            header_block = data.split(b"\r\n\r\n", 1)[0]
+            lines = header_block.split(b"\r\n")
+            host = ""
+            for line in lines[1:]:
+                lower = line.lower()
+                if lower.startswith(b"host:"):
+                    host = line[5:].strip().decode("utf-8", errors="ignore")
+                    break
+            if not host:
+                return "", 0
+            if ":" in host:
+                h, p = host.rsplit(":", 1)
+                if p.isdigit():
+                    return h, int(p)
+            return host, 80
         except Exception:
             pass
         return "", 0
 
+    def _ws_alive(self) -> bool:
+        if not self._ws:
+            return False
+        try:
+            return self._ws.state.name == "OPEN"
+        except AttributeError:
+            return getattr(self._ws, "open", True)
+
     async def _send_data(self, conn_id: str, data: bytes):
-        if not self._ws or not self._ws.open:
+        if not self._ws_alive():
             return
         try:
             await self._ws.send(RelayMessage.make_data(
@@ -161,7 +173,7 @@ class MockWorker:
             pass
 
     async def _send_end(self, conn_id: str):
-        if not self._ws or not self._ws.open:
+        if not self._ws_alive():
             return
         try:
             await self._ws.send(RelayMessage.make_end(conn_id).to_json())
@@ -169,7 +181,7 @@ class MockWorker:
             pass
 
     async def _send_error(self, conn_id: str, error: str):
-        if not self._ws or not self._ws.open:
+        if not self._ws_alive():
             return
         try:
             await self._ws.send(RelayMessage.make_error(conn_id, error).to_json())
