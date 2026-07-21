@@ -46,7 +46,12 @@ class WorkerBridge:
 
     @property
     def worker_connected(self) -> bool:
-        return self._worker is not None and self._worker.open
+        if self._worker is None:
+            return False
+        try:
+            return self._worker.state.name == "OPEN"
+        except AttributeError:
+            return getattr(self._worker, "open", True)
 
     async def start(self) -> None:
         self._server = await websockets.asyncio.server.serve(
@@ -72,7 +77,7 @@ class WorkerBridge:
     ) -> None:
         logger.info("worker connected from %s", ws.remote_address)
 
-        if self._worker is not None and self._worker.open:
+        if self._worker is not None and self.worker_connected:
             logger.warning("replacing existing worker connection")
             try:
                 await self._worker.close(1000, "replaced")
@@ -141,7 +146,7 @@ class WorkerBridge:
         return await self._send_raw(msg)
 
     async def _send_raw(self, msg: RelayMessage) -> bool:
-        if not self._worker or not self._worker.open:
+        if not self._worker or not self.worker_connected:
             return False
         try:
             async with self._send_lock:
