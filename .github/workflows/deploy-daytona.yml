@@ -23,8 +23,6 @@ jobs:
           username: ${{ secrets.DAYTONA_TOKEN }}
           password: ${{ secrets.DAYTONA_TOKEN }}
           script: |
-            set -e
-
             REPO_DIR="$HOME/proxy-ssh"
 
             if [ "${{ github.event.inputs.action }}" = "stop" ]; then
@@ -36,14 +34,26 @@ jobs:
 
             echo "=== Deploying relay to Daytona ==="
 
+            echo "--- System info ---"
+            uname -a
+            which python3 || which python || echo "no python"
+            python3 --version || true
+            which pip3 || which pip || echo "no pip"
+            which curl || echo "no curl"
+            which tar || echo "no tar"
+            echo "---"
+
             mkdir -p "$REPO_DIR"
             cd "$REPO_DIR"
 
             echo "Downloading code..."
             curl -sL https://github.com/Setron-dev/proxy-ssh/archive/refs/heads/main.tar.gz | tar xz --strip-components=1
 
-            echo "Installing dependencies..."
-            pip3 install websockets --break-system-packages 2>/dev/null || pip3 install websockets
+            echo "Installing websockets..."
+            python3 -m pip install websockets --break-system-packages 2>/dev/null || \
+            python3 -m pip install websockets 2>/dev/null || \
+            python3 -c "import websockets; print('websockets already available')" || \
+            echo "WARN: websockets not installed, will try to run anyway"
 
             echo "Stopping old relay if running..."
             pkill -f relay_standalone.py || true
